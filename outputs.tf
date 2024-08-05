@@ -95,3 +95,87 @@ output "field_level_encryption_config_etag" {
     aws_cloudfront_field_level_encryption_config.this.*.etag
   )
 }
+
+## Field Level Encryption Profile ##
+
+output "field_level_encryption_profile_id" {
+  value = try(
+    aws_cloudfront_field_level_encryption_profile.this.*.id
+  )
+}
+
+output "field_level_encryption_profile_name" {
+  value = try(
+    aws_cloudfront_field_level_encryption_profile.this.*.name
+  )
+}
+
+output "field_level_encryption_profile_encryption_entities" {
+  value = try(
+    aws_cloudfront_field_level_encryption_profile.this.*.encryption_entities
+  )
+}
+
+## Function ##
+
+output "function_id" {
+  value = try(
+    aws_cloudfront_function.this.*.id
+  )
+}
+
+output "function_name" {
+  value = try(
+    aws_cloudfront_function.this.*.name
+  )
+}
+
+output "function_arn" {
+  value = try(
+    aws_cloudfront_function.this.*.arn
+  )
+}
+
+output "function_status" {
+  value = try(
+    aws_cloudfront_function.this.*.status
+  )
+}
+
+## Origin Access Control ##
+
+output "origin_access_control_id" {
+  value = try(
+    aws_cloudfront_origin_access_control.this.*.id
+  )
+}
+
+output "origin_access_control_name" {
+  value = try(
+    aws_cloudfront_origin_access_control.this.*.name
+  )
+}
+
+output "origin_access_control_etag" {
+  value = try(
+    aws_cloudfront_origin_access_control.this.*.etag
+  )
+}
+
+output "origin_access_control_signing_behavior" {
+  value = try(
+    aws_cloudfront_origin_access_control.this.*.signing_behavior
+  )
+}
+
+output "origin_access_control_origin_type" {
+  value = try(
+    aws_cloudfront_origin_access_control.this.*.origin_access_control_origin_type
+  )
+}
+
+output "origin_access_control_signing_protocol" {
+  value = try(
+    aws_cloudfront_origin_access_control.this.*.signing_protocol
+  )
+}

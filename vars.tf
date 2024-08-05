@@ -237,7 +237,7 @@ variable "distribution" {
         origin_read_timeout      = optional(number)
       })), [])
       s3_origin_config = optional(list(object({
-        origin_access_identity = string
+        origin_access_identity_id = any
       })), [])
     })), [])
     origin_group = optional(list(object({
@@ -352,6 +352,113 @@ variable "field_level_encryption_config" {
         }))
       }))
     }))
+  }))
+  default = []
+}
+
+variable "field_level_encryption_profile" {
+  type = list(object({
+    id      = number
+    name    = string
+    comment = optional(string)
+    encryption_entities = list(object({
+      items = list(object({
+        public_key_id = string
+        provider_id   = string
+        field_patterns = list(object({
+          items = list(string)
+        }))
+      }))
+    }))
+  }))
+  default = []
+}
+
+variable "function" {
+  type = list(object({
+    id                  = number
+    code                = string
+    name                = string
+    runtime             = string
+    comment             = optional(bool)
+    publish             = optional(bool)
+    key_value_store_arn = optional(list(any))
+  }))
+  default = []
+
+  validation {
+    condition = length([
+      for a in var.function : true if contains(["cloudfront-js-1.0", "cloudfront-js-2.0"], a.runtime)
+    ]) == length(var.function)
+    error_message = "Valid values are cloudfront-js-1.0 and cloudfront-js-2.0."
+  }
+}
+
+variable "key_group" {
+  type = list(object({
+    id      = number
+    items   = list(string)
+    name    = string
+    comment = optional(string)
+  }))
+  default = []
+}
+
+variable "key_value_store" {
+  type = list(object({
+    id      = number
+    name    = string
+    comment = optional(string)
+  }))
+  default = []
+}
+
+variable "monitoring_subscription" {
+  type = list(object({
+    id              = number
+    distribution_id = any
+    status          = string
+  }))
+  default = []
+
+  validation {
+    condition = length([
+      for a in var.monitoring_subscription : true if contains(["Enabled", "Disabled"], a.status)
+    ]) == length(var.monitoring_subscription)
+    error_message = "Valid values are Enabled or Disabled."
+  }
+}
+
+variable "origin_access_control" {
+  type = list(object({
+    id                                = number
+    name                              = string
+    origin_access_control_origin_type = string
+    signing_behavior                  = string
+    signing_protocol                  = string
+    description                       = optional(string)
+  }))
+  default = []
+
+  validation {
+    condition = length([
+      for a in var.origin_access_control : true if contains(["lambda", "mediapackagev2", "mediastore", "s3"], a.origin_access_control_origin_type)
+    ]) == length(var.origin_access_control)
+    error_message = "Valid values are lambda, mediapackagev2, mediastore, and s3."
+  }
+
+  validation {
+    condition = length([
+      for a in var.origin_access_control : true if contains(["always", "never", "no-override"], a.signing_behavior)
+    ]) == length(var.origin_access_control)
+    error_message = "Allowed values: always, never, and no-override."
+  }
+}
+
+variable "origin_access_identity" {
+  type = list(object({
+    id      = number
+    comment = optional(string)
   }))
   default = []
 }

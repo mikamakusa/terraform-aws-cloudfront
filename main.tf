@@ -247,7 +247,9 @@ resource "aws_cloudfront_distribution" "this" {
       dynamic "s3_origin_config" {
         for_each = lookup(origin.value, "s3_origin_config") == null ? [] : ["s3_origin_config"]
         content {
-          origin_access_identity = lookup(s3_origin_config.value, "origin_access_identity")
+          origin_access_identity = try(
+            element(aws_cloudfront_origin_access_identity.this.*.cloudfront_access_identity_path, lookup(s3_origin_config.value, "origin_access_identity_id"))
+          )
         }
       }
     }
@@ -304,7 +306,7 @@ resource "aws_cloudfront_distribution" "this" {
 }
 
 resource "aws_cloudfront_field_level_encryption_config" "this" {
-  count = length(var.field_level_encryption_config)
+  count   = length(var.field_level_encryption_config)
   comment = lookup(var.field_level_encryption_config[count.index], "comment")
 
   dynamic "content_type_profile_config" {
@@ -350,3 +352,82 @@ resource "aws_cloudfront_field_level_encryption_config" "this" {
     }
   }
 }
+
+resource "aws_cloudfront_field_level_encryption_profile" "this" {
+  count   = length(var.field_level_encryption_profile)
+  name    = lookup(var.field_level_encryption_profile[count.index], "name")
+  comment = lookup(var.field_level_encryption_profile[count.index], "comment")
+
+  dynamic "encryption_entities" {
+    for_each = lookup(var.field_level_encryption_profile[count.index], "encryption_entities")
+    content {
+      dynamic "items" {
+        for_each = lookup(encryption_entities.value, "items")
+        content {
+          public_key_id = lookup(items.value, "public_key_id")
+          provider_id   = lookup(items.value, "provider_id")
+
+          dynamic "field_patterns" {
+            for_each = lookup(items.value, "field_patterns")
+            content {
+              items = lookup(field_patterns.value, "items")
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "aws_cloudfront_function" "this" {
+  count   = length(var.function)
+  code    = file(join("/", [path.cwd, "code", lookup(var.function[count.index], "code")]))
+  name    = lookup(var.function[count.index], "name")
+  runtime = lookup(var.function[count.index], "runtime")
+  comment = lookup(var.function[count.index], "comment")
+  publish = lookup(var.function[count.index], "publish")
+  key_value_store_associations = try(
+    element(aws_cloudfront_key_value_store.this.*.arn, lookup(var.function[count.index], "key_value_store_arn"))
+  )
+}
+
+resource "aws_cloudfront_key_group" "this" {
+  count   = length(var.key_group)
+  items   = lookup(var.key_group[count.index], "items")
+  name    = lookup(var.key_group[count.index], "name")
+  comment = lookup(var.key_group[count.index], "comment")
+}
+
+resource "aws_cloudfront_key_value_store" "this" {
+  count   = length(var.key_value_store)
+  name    = lookup(var.key_value_store[count.index], "name")
+  comment = lookup(var.key_value_store[count.index], "comment")
+}
+
+resource "aws_cloudfront_monitoring_subscription" "this" {
+  count = length(var.distribution) == 0 ? 0 : length(var.monitoring_subscription)
+  distribution_id = try(
+    element(aws_cloudfront_distribution.this.*.id, lookup(var.monitoring_subscription[count.index], "distribution_id"))
+  )
+
+  monitoring_subscription {
+    realtime_metrics_subscription_config {
+      realtime_metrics_subscription_status = lookup(var.monitoring_subscription[count.index], "status")
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_access_control" "this" {
+  count                             = length(var.origin_access_control)
+  name                              = lookup(var.origin_access_control[count.index], "name")
+  origin_access_control_origin_type = lookup(var.origin_access_control[count.index], "origin_access_control_origin_type")
+  signing_behavior                  = lookup(var.origin_access_control[count.index], "signing_behavior")
+  signing_protocol                  = lookup(var.origin_access_control[count.index], "signing_protocol", "sigv4")
+  description                       = lookup(var.origin_access_control[count.index], "description")
+}
+
+resource "aws_cloudfront_origin_access_identity" "this" {
+  count   = length(var.origin_access_identity)
+  comment = lookup(var.origin_access_identity[count.index], "comment")
+}
+
