@@ -37,5 +37,27 @@ run "cloudfront" {
         ]
       }
     ]
+    continuous_deployment_policy = [
+      {
+        id      = 0
+        enabled = true
+        staging_distribution_dns_names = [
+          {
+            items_id = [aws_cloudfront_distribution.staging.domain_name]
+            quantity = 1
+          }
+        ]
+        traffic_config = [
+          {
+            type = "SingleWeight"
+            single_weight_config = [
+              {
+                weight = "0.01"
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }
