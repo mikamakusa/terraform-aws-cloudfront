@@ -179,3 +179,61 @@ output "origin_access_control_signing_protocol" {
     aws_cloudfront_origin_access_control.this.*.signing_protocol
   )
 }
+
+## Origin Request Policy ##
+
+output "origin_request_policy_id" {
+  value = try(
+    aws_cloudfront_origin_request_policy.this.*.id
+  )
+}
+
+output "origin_request_policy_name" {
+  value = try(
+    aws_cloudfront_origin_request_policy.this.*.name
+  )
+}
+
+output "origin_request_policy_etag" {
+  value = try(
+    aws_cloudfront_origin_request_policy.this.*.etag
+  )
+}
+
+output "origin_request_policy_query_strings_config" {
+  value = try(
+    aws_cloudfront_origin_request_policy.this.*.query_strings_config
+  )
+}
+
+output "origin_request_policy_headers_config" {
+  value = try(
+    aws_cloudfront_origin_request_policy.this.*.headers_config
+  )
+}
+
+output "origin_request_policy_cookies_config" {
+  value = try(
+    aws_cloudfront_origin_request_policy.this.*.cookies_config
+  )
+}
+
+## Public Key ##
+
+output "public_key_id" {
+  value = try(
+    aws_cloudfront_public_key.this.*.id
+  )
+}
+
+output "public_key_name" {
+  value = try(
+    aws_cloudfront_public_key.this.*.name
+  )
+}
+
+output "public_key_etag" {
+  value = try(
+    aws_cloudfront_public_key.this.*.etag
+  )
+}

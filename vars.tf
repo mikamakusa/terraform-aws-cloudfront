@@ -43,6 +43,16 @@ variable "iam_certificate_id" {
   default = null
 }
 
+variable "kinesis_stream_config_role_arn" {
+  type    = string
+  default = null
+}
+
+variable "kinesis_stream_config_stream_arn" {
+  type    = string
+  default = null
+}
+
 variable "cache_policy" {
   type = list(object({
     id          = number
@@ -104,7 +114,7 @@ variable "continuous_deployment_policy" {
     enabled = bool
     staging_distribution_dns_names = list(object({
       quantity = number
-      items    = optional(set(string))
+      items_id = optional(set(any))
     }))
     traffic_config = list(object({
       type = string
@@ -461,4 +471,149 @@ variable "origin_access_identity" {
     comment = optional(string)
   }))
   default = []
+}
+
+variable "origin_request_policy" {
+  type = list(object({
+    id      = number
+    name    = string
+    comment = optional(string)
+    cookies_config = list(object({
+      cookie_behavior = string
+      cookies = optional(list(object({
+        items = set(string)
+      })), [])
+    }))
+    headers_config = list(object({
+      header_behavior = string
+      headers = optional(list(object({
+        items = set(string)
+      })), [])
+    }))
+    query_strings_config = list(object({
+      query_string_behavior = string
+      query_strings = optional(list(object({
+        items = set(string)
+      })), [])
+    }))
+  }))
+  default = []
+}
+
+variable "public_key" {
+  type = list(object({
+    id          = number
+    encoded_key = string
+    comment     = optional(string)
+    name        = optional(string)
+    name_prefix = optional(string)
+  }))
+  default = []
+}
+
+variable "realtime_log_config" {
+  type = list(object({
+    id            = number
+    fields        = set(string)
+    name          = string
+    sampling_rate = number
+    endpoint = list(object({
+      stream_type = string
+      kinesis_stream_config = list(object({
+        stream_arn = any
+        role_arn   = any
+      }))
+    }))
+  }))
+  default = []
+
+  validation {
+    condition = length([
+      for a in var.realtime_log_config : true if contains(["Kinesis"], a.endpoint.stream_type)
+    ]) == length(var.realtime_log_config)
+    error_message = "The only valid value is Kinesis."
+  }
+
+  validation {
+    condition = length([
+      for b in var.realtime_log_config : true if b.sampling_rate >= 1 && b.sampling_rate <= 100
+    ]) == length(var.realtime_log_config)
+    error_message = "The value must be in the range 1 - 100."
+  }
+}
+
+variable "response_headers_policy" {
+  type = list(object({
+    id      = number
+    name    = string
+    comment = optional(string)
+    cors_config = optional(list(object({
+      origin_override                  = bool
+      access_control_allow_credentials = bool
+      access_control_max_age_sec       = optional(number)
+      access_control_allow_headers     = set(string)
+      access_control_allow_origins     = set(string)
+      access_control_allow_methods     = set(string)
+      access_control_expose_headers    = optional(set(string))
+    })))
+    custom_headers_config = optional(list(object({
+      header   = string
+      override = bool
+      value    = string
+    })))
+    remove_headers_config = optional(list(object({
+      header = string
+    })))
+    security_headers_config = optional(list(object({
+      content_security_policy = optional(list(object({
+        content_security_policy = string
+        override                = bool
+      })))
+      content_type_options = optional(list(object({
+        override = bool
+      })))
+      frame_options = optional(list(object({
+        frame_option = string
+        override     = bool
+      })))
+      referrer_policy = optional(list(object({
+        override        = bool
+        referrer_policy = string
+      })))
+      strict_transport_security = optional(list(object({
+        override                   = bool
+        access_control_max_age_sec = number
+      })))
+      xss_protection = optional(list(object({
+        override   = bool
+        protection = bool
+      })))
+    })))
+    server_timing_headers_config = optional(list(object({
+      enabled       = bool
+      sampling_rate = number
+    })))
+  }))
+  default = []
+
+  validation {
+    condition = length([
+      for a in var.response_headers_policy : true if contains(["GET", "POST", "OPTIONS", "PUT", "DELETE", "HEAD", "ALL"], a.cors_config.access_control_allow_headers)
+    ]) == length(var.realtime_log_config)
+    error_message = "Valid values: GET | POST | OPTIONS | PUT | DELETE | HEAD | ALL."
+  }
+
+  validation {
+    condition = length([
+      for b in var.response_headers_policy : true if contains(["DENY", "SAMEORIGIN"], b.security_headers_config.frame_options.frame_option)
+    ]) == length(var.realtime_log_config)
+    error_message = "Valid values: DENY | SAMEORIGIN."
+  }
+
+  validation {
+    condition = length([
+      for c in var.response_headers_policy : true if contains(["no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin", "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url"], c.security_headers_config.referrer_policy.referrer_policy)
+    ]) == length(var.realtime_log_config)
+    error_message = "Valid values: no-referrer | no-referrer-when-downgrade | origin | origin-when-cross-origin | same-origin | strict-origin | strict-origin-when-cross-origin | unsafe-url."
+  }
 }

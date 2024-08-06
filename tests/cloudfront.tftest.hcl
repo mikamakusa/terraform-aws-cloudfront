@@ -107,5 +107,13 @@ run "cloudfront" {
         comment = "blablabla"
       }
     ]
+    public_key = [
+      {
+        id          = 0
+        comment     = "test public key"
+        encoded_key = "public_key.pem"
+        name        = "test_key"
+      }
+    ]
   }
 }

@@ -64,7 +64,11 @@ resource "aws_cloudfront_continuous_deployment_policy" "this" {
     for_each = lookup(var.continuous_deployment_policy[count.index], "staging_distribution_dns_names")
     content {
       quantity = lookup(staging_distribution_dns_names.value, "quantity")
-      items    = lookup(staging_distribution_dns_names.value, "items")
+      items = [
+        try(
+          element(aws_cloudfront_distribution.this.*.domain_name, lookup(staging_distribution_dns_names.value, "items_id"))
+        )
+      ]
     }
   }
 
@@ -431,3 +435,192 @@ resource "aws_cloudfront_origin_access_identity" "this" {
   comment = lookup(var.origin_access_identity[count.index], "comment")
 }
 
+resource "aws_cloudfront_origin_request_policy" "this" {
+  count   = length(var.origin_request_policy)
+  name    = lookup(var.origin_request_policy[count.index], "name")
+  comment = lookup(var.origin_request_policy[count.index], "comment")
+
+  dynamic "cookies_config" {
+    for_each = lookup(var.origin_request_policy[count.index], "cookies_config")
+    content {
+      cookie_behavior = lookup(cookies_config.value, "cookie_behavior")
+
+      dynamic "cookies" {
+        for_each = lookup(cookies_config.value, "cookies")
+        content {
+          items = lookup(cookies.value, "items")
+        }
+      }
+    }
+  }
+
+  dynamic "headers_config" {
+    for_each = lookup(var.origin_request_policy[count.index], "headers_config")
+    content {
+      header_behavior = lookup(headers_config.value, "header_behavior")
+
+      dynamic "headers" {
+        for_each = lookup(headers_config.value, "headers")
+        content {
+          items = lookup(headers.value, "items")
+        }
+      }
+    }
+  }
+
+  dynamic "query_strings_config" {
+    for_each = lookup(var.origin_request_policy[count.index], "query_strings_config")
+    content {
+      query_string_behavior = lookup(query_strings_config.value, "query_string_behavior")
+
+      dynamic "query_strings" {
+        for_each = lookup(query_strings_config.value, "query_strings")
+        content {
+          items = lookup(query_strings.value, "items")
+        }
+      }
+    }
+  }
+}
+
+resource "aws_cloudfront_public_key" "this" {
+  count       = length(var.public_key)
+  encoded_key = file(join("/", [path.cwd, "keys", lookup(var.public_key[count.index], "encoded_key")]))
+  comment     = lookup(var.public_key[count.index], "comment")
+  name        = lookup(var.public_key[count.index], "name")
+  name_prefix = lookup(var.public_key[count.index], "name_prefix")
+}
+
+resource "aws_cloudfront_realtime_log_config" "this" {
+  count         = length(var.realtime_log_config)
+  fields        = lookup(var.realtime_log_config[count.index], "fields")
+  name          = lookup(var.realtime_log_config[count.index], "name")
+  sampling_rate = lookup(var.realtime_log_config[count.index], "sampling_rate")
+
+  dynamic "endpoint" {
+    for_each = lookup(var.realtime_log_config[count.index], "endpoint")
+    content {
+      stream_type = lookup(endpoint.value, "stream_type")
+
+      dynamic "kinesis_stream_config" {
+        for_each = lookup(endpoint.value, "kinesis_stream_config")
+        content {
+          stream_arn = lookup(kinesis_stream_config.value, "stream_arn") != null ? try(
+            element(var.kinesis_stream_config_stream_arn, lookup(kinesis_stream_config.value, "stream_arn"))
+          ) : var.kinesis_stream_config_stream_arn
+          role_arn = lookup(kinesis_stream_config.value, "role_arn") != null ? try(
+            element(var.kinesis_stream_config_role_arn, lookup(kinesis_stream_config.value, "role_arn"))
+          ) : var.kinesis_stream_config_role_arn
+        }
+      }
+    }
+  }
+}
+
+resource "aws_cloudfront_response_headers_policy" "this" {
+  count   = length(var.response_headers_policy)
+  name    = lookup(var.response_headers_policy[count.index], "name")
+  comment = lookup(var.response_headers_policy[count.index], "comment")
+
+  dynamic "cors_config" {
+    for_each = lookup(var.response_headers_policy[count.index], "cors_config") == null ? [] : ["cors_config"]
+    content {
+      origin_override                  = lookup(cors_config.value, "origin_override")
+      access_control_allow_credentials = lookup(cors_config.value, "access_control_allow_credentials")
+      access_control_max_age_sec       = lookup(cors_config.value, "access_control_max_age_sec")
+
+      access_control_allow_headers {
+        items = lookup(cors_config.value, "access_control_allow_headers")
+      }
+      access_control_allow_origins {
+        items = lookup(cors_config.value, "access_control_allow_origins")
+      }
+      access_control_allow_methods {
+        items = lookup(cors_config.value, "access_control_allow_methods")
+      }
+      access_control_expose_headers {
+        items = lookup(cors_config.value, "access_control_expose_headers")
+      }
+    }
+  }
+
+  dynamic "custom_headers_config" {
+    for_each = lookup(var.response_headers_policy[count.index], "custom_headers_config") == null ? [] : ["custom_headers_config"]
+    content {
+      items {
+        header   = lookup(custom_headers_config.value, "header")
+        override = lookup(custom_headers_config.value, "override")
+        value    = lookup(custom_headers_config.value, "value")
+      }
+    }
+  }
+
+  dynamic "remove_headers_config" {
+    for_each = lookup(var.response_headers_policy[count.index], "remove_headers_config") == null ? [] : ["remove_headers_config"]
+    content {
+      items {
+        header = lookup(remove_headers_config.value, "header")
+      }
+    }
+  }
+
+  dynamic "security_headers_config" {
+    for_each = lookup(var.response_headers_policy[count.index], "security_headers_config") == null ? [] : ["security_headers_config"]
+    content {
+      dynamic "content_security_policy" {
+        for_each = lookup(security_headers_config.value, "content_security_policy") == null ? [] : ["content_security_policy"]
+        content {
+          content_security_policy = lookup(content_security_policy.value, "content_security_policy")
+          override                = lookup(content_security_policy.value, "override")
+        }
+      }
+
+      dynamic "content_type_options" {
+        for_each = lookup(security_headers_config.value, "content_type_options") == null ? [] : ["content_type_options"]
+        content {
+          override = lookup(content_type_options.value, "override")
+        }
+      }
+
+      dynamic "frame_options" {
+        for_each = lookup(security_headers_config.value, "frame_options") == null ? [] : ["frame_options"]
+        content {
+          frame_option = lookup(frame_options.value, "frame_option")
+          override     = lookup(frame_options.value, "override")
+        }
+      }
+
+      dynamic "referrer_policy" {
+        for_each = lookup(security_headers_config.value, "referrer_policy") == null ? [] : ["referrer_policy"]
+        content {
+          override        = lookup(referrer_policy.value, "override")
+          referrer_policy = lookup(referrer_policy.value, "referrer_policy")
+        }
+      }
+
+      dynamic "strict_transport_security" {
+        for_each = lookup(security_headers_config.value, "strict_transport_security") == null ? [] : ["strict_transport_security"]
+        content {
+          override                   = lookup(strict_transport_security.value, "override")
+          access_control_max_age_sec = lookup(strict_transport_security.value, "access_control_max_age_sec")
+        }
+      }
+
+      dynamic "xss_protection" {
+        for_each = lookup(security_headers_config.value, "xss_protection") == null ? [] : ["xss_protection"]
+        content {
+          override   = lookup(xss_protection.value, "override")
+          protection = lookup(xss_protection.value, "protection")
+        }
+      }
+    }
+  }
+
+  dynamic "server_timing_headers_config" {
+    for_each = lookup(var.response_headers_policy[count.index], "server_timing_headers_config") == null ? [] : ["server_timing_headers_config"]
+    content {
+      enabled       = lookup(server_timing_headers_config.value, "enabled")
+      sampling_rate = lookup(server_timing_headers_config.value, "sampling_rate")
+    }
+  }
+}
